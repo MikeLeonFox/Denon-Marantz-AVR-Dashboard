@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, useCallback } from 'react'
+import { DEMO_MODE, DEMO_STATE, applyDemoCommand } from '../demoData'
 import type { ReceiverState, SendCommandFn } from '../types'
 
 const RECONNECT_DELAY = 3000
@@ -8,8 +9,8 @@ export function useWebSocket(): {
   wsConnected: boolean
   sendCommand: SendCommandFn
 } {
-  const [state, setState] = useState<ReceiverState | null>(null)
-  const [wsConnected, setWsConnected] = useState(false)
+  const [state, setState] = useState<ReceiverState | null>(DEMO_MODE ? DEMO_STATE : null)
+  const [wsConnected, setWsConnected] = useState(DEMO_MODE)
   const wsRef = useRef<WebSocket | null>(null)
   const reconnectTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const lastJsonRef = useRef<string | null>(null)
@@ -44,12 +45,11 @@ export function useWebSocket(): {
       reconnectTimer.current = setTimeout(connect, RECONNECT_DELAY)
     }
 
-    ws.onerror = () => {
-      ws.close()
-    }
+    ws.onerror = () => { ws.close() }
   }, [])
 
   useEffect(() => {
+    if (DEMO_MODE) return
     connect()
     return () => {
       wsRef.current?.close()
@@ -58,6 +58,10 @@ export function useWebSocket(): {
   }, [connect])
 
   const sendCommand = useCallback<SendCommandFn>((command) => {
+    if (DEMO_MODE) {
+      setState(prev => prev ? applyDemoCommand(prev, command) : prev)
+      return
+    }
     if (wsRef.current?.readyState === WebSocket.OPEN) {
       wsRef.current.send(JSON.stringify({ command }))
     }

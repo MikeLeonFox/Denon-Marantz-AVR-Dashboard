@@ -1,8 +1,10 @@
 import { useCallback } from 'react'
+import { DEMO_MODE } from '../demoData'
 import type { PostFn } from '../types'
 
 export function useApi(): { post: PostFn } {
   const post = useCallback<PostFn>(async (path, body = {}) => {
+    if (DEMO_MODE) return { ok: true, status: 200 }
     try {
       const res = await fetch(`/api/v1${path}`, {
         method: 'POST',
