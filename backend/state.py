@@ -228,6 +228,22 @@ class AppState:
             except Exception as exc:
                 _LOGGER.debug("Media poll error: %s", exc)
 
+    async def start_demo(self) -> None:
+        """Set up a mock receiver for development without a physical AVR."""
+        from denon.mock_client import MockDenonClient
+
+        async with self._lock:
+            mock = MockDenonClient()
+            self.telnet = mock  # assign before connect so broadcast_state() works
+
+            async def _on_state_change(state: dict[str, Any]) -> None:
+                await self.broadcast_state()
+
+            mock.on_state_change(_on_state_change)
+            await mock.connect()
+
+        await self.broadcast_state()
+
     async def connect_to_host(self, host: str) -> None:
         """Connect telnet + HEOS for a given host IP."""
         from calibration import fetch_speaker_calibration
