@@ -1,4 +1,6 @@
 import { useState, useMemo, useRef, useCallback } from 'react'
+import { motion, AnimatePresence } from 'framer-motion'
+import { fadeInUp, FAST } from '../variants'
 import { getModeInfo } from '../data/soundModeInfo'
 import ModeInfoPopover from './ModeInfoPopover'
 import ModeInfoPanel from './ModeInfoPanel'
@@ -119,55 +121,69 @@ export default function SurroundMode({ state, sendCommand }: Props) {
         <h2 className="text-sm font-medium text-denon-muted mb-3">Cycle Modes</h2>
         <div className="grid grid-cols-4 gap-2">
           {CATEGORIES.map(cat => (
-            <button
+            <motion.button
               key={cat.command}
               onClick={() => onCycleClick(cat)}
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.97 }}
               className={`py-2.5 px-3 rounded-xl text-xs font-medium transition-all ${
                 expandedCat === cat.code
                   ? 'bg-denon-surface text-denon-gold border border-denon-gold/30'
-                  : 'bg-denon-surface/70 text-denon-text hover:bg-denon-surface hover:scale-[1.02] active:scale-[0.98]'
+                  : 'bg-denon-surface/70 text-denon-text hover:bg-denon-surface'
               }`}
             >
               {cat.label}
-            </button>
+            </motion.button>
           ))}
         </div>
 
-        {expandedCat != null && expandedModes.length > 0 && (
-          <div className="mt-3 pt-3 border-t border-denon-border/30">
-            <div className="space-y-1">
-              {expandedModes.map((mode, idx) => {
-                const playing = isPlaying(mode)
-                const isNext = idx === nextIdx
-                return (
-                  <div
-                    key={`${mode.category}${mode.id}`}
-                    className={`flex items-center gap-2 py-1.5 px-2.5 rounded-lg text-xs transition-all ${
-                      playing
-                        ? 'bg-denon-gold/15 text-denon-gold font-medium'
-                        : isNext
-                          ? 'bg-denon-surface/50 text-denon-text'
-                          : 'text-denon-muted'
-                    }`}
-                  >
-                    <span className="w-4 text-center shrink-0">
-                      {playing ? '▸' : isNext ? '→' : ''}
-                    </span>
-                    <span>{mode.display_name}</span>
-                  </div>
-                )
-              })}
-            </div>
-          </div>
-        )}
+        <AnimatePresence>
+          {expandedCat != null && expandedModes.length > 0 && (
+            <motion.div
+              key="expanded-modes"
+              variants={fadeInUp}
+              initial="initial"
+              animate="animate"
+              exit="exit"
+              transition={FAST}
+              className="mt-3 pt-3 border-t border-denon-border/30"
+            >
+              <div className="space-y-1">
+                {expandedModes.map((mode, idx) => {
+                  const playing = isPlaying(mode)
+                  const isNext = idx === nextIdx
+                  return (
+                    <div
+                      key={`${mode.category}${mode.id}`}
+                      className={`flex items-center gap-2 py-1.5 px-2.5 rounded-lg text-xs transition-all ${
+                        playing
+                          ? 'bg-denon-gold/15 text-denon-gold font-medium'
+                          : isNext
+                            ? 'bg-denon-surface/50 text-denon-text'
+                            : 'text-denon-muted'
+                      }`}
+                    >
+                      <span className="w-4 text-center shrink-0">
+                        {playing ? '▸' : isNext ? '→' : ''}
+                      </span>
+                      <span>{mode.display_name}</span>
+                    </div>
+                  )
+                })}
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
 
       <div className="card">
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-2">
             <h2 className="text-sm font-medium text-denon-muted">Available Sound Modes</h2>
-            <button
+            <motion.button
               onClick={() => { setInfoMode(m => !m); setSelectedInfoMode(null) }}
+              whileHover={{ scale: 1.1 }}
+              whileTap={{ scale: 0.9 }}
               className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold transition-all ${
                 infoMode
                   ? 'bg-denon-gold/20 text-denon-gold ring-1 ring-denon-gold/40'
@@ -176,7 +192,7 @@ export default function SurroundMode({ state, sendCommand }: Props) {
               aria-label="Toggle mode info"
             >
               i
-            </button>
+            </motion.button>
           </div>
           {current && (
             <span className="text-xs text-denon-gold font-medium bg-denon-gold/10 px-2 py-0.5 rounded-lg">
@@ -190,7 +206,7 @@ export default function SurroundMode({ state, sendCommand }: Props) {
               const playing = isPlaying(mode)
               const hasInfo = !!getModeInfo(mode.display_name)
               return (
-                <button
+                <motion.button
                   key={mode.display_name}
                   ref={el => { buttonRefs.current[mode.display_name] = el }}
                   onClick={() => {
@@ -209,12 +225,14 @@ export default function SurroundMode({ state, sendCommand }: Props) {
                     if (hoverTimerRef.current) clearTimeout(hoverTimerRef.current)
                     setHoveredMode(null)
                   }}
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.97 }}
                   className={`group relative py-2.5 px-3 rounded-xl text-xs font-medium transition-all text-left overflow-hidden ${
                     playing
                       ? 'bg-gradient-to-br from-denon-gold/20 to-amber-500/10 text-denon-gold ring-1 ring-denon-gold/40'
                       : infoMode && hasInfo
-                        ? 'bg-denon-surface/70 text-denon-text ring-1 ring-denon-gold/20 hover:ring-denon-gold/40 hover:scale-[1.02] active:scale-[0.98]'
-                        : 'bg-denon-surface/70 text-denon-text hover:bg-denon-surface hover:scale-[1.02] active:scale-[0.98]'
+                        ? 'bg-denon-surface/70 text-denon-text ring-1 ring-denon-gold/20 hover:ring-denon-gold/40'
+                        : 'bg-denon-surface/70 text-denon-text hover:bg-denon-surface'
                   }`}
                 >
                   {mode.display_name}
@@ -224,7 +242,7 @@ export default function SurroundMode({ state, sendCommand }: Props) {
                   {infoMode && hasInfo && (
                     <span className="absolute top-1 right-1.5 text-[8px] text-denon-muted">ⓘ</span>
                   )}
-                </button>
+                </motion.button>
               )
             })
           ) : (
@@ -232,7 +250,7 @@ export default function SurroundMode({ state, sendCommand }: Props) {
               const playing = current === modeName
               const hasInfo = !!getModeInfo(modeName)
               return (
-                <button
+                <motion.button
                   key={modeName}
                   ref={el => { buttonRefs.current[modeName] = el }}
                   onClick={() => {
@@ -251,12 +269,14 @@ export default function SurroundMode({ state, sendCommand }: Props) {
                     if (hoverTimerRef.current) clearTimeout(hoverTimerRef.current)
                     setHoveredMode(null)
                   }}
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.97 }}
                   className={`group relative py-2.5 px-3 rounded-xl text-xs font-medium transition-all text-left overflow-hidden ${
                     playing
                       ? 'bg-gradient-to-br from-denon-gold/20 to-amber-500/10 text-denon-gold ring-1 ring-denon-gold/40'
                       : infoMode && hasInfo
-                        ? 'bg-denon-surface/70 text-denon-text ring-1 ring-denon-gold/20 hover:ring-denon-gold/40 hover:scale-[1.02] active:scale-[0.98]'
-                        : 'bg-denon-surface/70 text-denon-text hover:bg-denon-surface hover:scale-[1.02] active:scale-[0.98]'
+                        ? 'bg-denon-surface/70 text-denon-text ring-1 ring-denon-gold/20 hover:ring-denon-gold/40'
+                        : 'bg-denon-surface/70 text-denon-text hover:bg-denon-surface'
                   }`}
                 >
                   {modeName}
@@ -266,19 +286,30 @@ export default function SurroundMode({ state, sendCommand }: Props) {
                   {infoMode && hasInfo && (
                     <span className="absolute top-1 right-1.5 text-[8px] text-denon-muted">ⓘ</span>
                   )}
-                </button>
+                </motion.button>
               )
             })
           )}
         </div>
 
-        {infoMode && selectedInfoMode && (
-          <ModeInfoPanel
-            modeName={selectedInfoMode}
-            modeInfo={getModeInfo(selectedInfoMode)}
-            onClose={() => setSelectedInfoMode(null)}
-          />
-        )}
+        <AnimatePresence>
+          {infoMode && selectedInfoMode && (
+            <motion.div
+              key="info-panel"
+              variants={fadeInUp}
+              initial="initial"
+              animate="animate"
+              exit="exit"
+              transition={FAST}
+            >
+              <ModeInfoPanel
+                modeName={selectedInfoMode}
+                modeInfo={getModeInfo(selectedInfoMode)}
+                onClose={() => setSelectedInfoMode(null)}
+              />
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         {hoveredMode != null && !infoMode && (
           <ModeInfoPopover

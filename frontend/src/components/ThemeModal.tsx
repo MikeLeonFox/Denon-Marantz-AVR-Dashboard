@@ -1,4 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
+import { motion, AnimatePresence } from 'framer-motion'
+import { fadeInUp, FAST, SPRING } from '../variants'
 import { THEMES, applyThemeConfig, saveThemeToServer } from '../theme'
 import { DEMO_MODE } from '../demoData'
 import type { Theme, ThemeConfig, ThemeName } from '../types'
@@ -95,26 +97,36 @@ export default function ThemeModal({ currentConfig, onClose, onSaved }: Props) {
   const baseTheme = THEMES[draft.base] ?? THEMES.gold
 
   return (
-    <div
+    <motion.div
       className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      transition={FAST}
       onClick={e => { if (e.target === e.currentTarget) handleCancel() }}
     >
-      <div
+      <motion.div
         ref={modalRef}
-        className="bg-denon-card border border-denon-border rounded-2xl w-full max-w-md max-h-[90vh] overflow-y-auto shadow-2xl shadow-black/60 fade-in"
+        className="bg-denon-card border border-denon-border rounded-2xl w-full max-w-md max-h-[90vh] overflow-y-auto shadow-2xl shadow-black/60"
+        initial={{ opacity: 0, scale: 0.95, y: 8 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        exit={{ opacity: 0, scale: 0.95, y: 4 }}
+        transition={{ duration: 0.2, ease: 'easeOut' }}
       >
         {/* Header */}
         <div className="flex items-center justify-between p-5 border-b border-denon-border/60">
           <h2 className="text-denon-text font-semibold text-base">Theme Settings</h2>
-          <button
+          <motion.button
             onClick={handleCancel}
+            whileHover={{ scale: 1.1 }}
+            whileTap={{ scale: 0.9 }}
             className="w-8 h-8 flex items-center justify-center rounded-lg text-denon-muted hover:text-denon-text hover:bg-denon-surface/70 transition-all"
             aria-label="Close"
           >
             <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
               <path d="M18 6L6 18M6 6l12 12" />
             </svg>
-          </button>
+          </motion.button>
         </div>
 
         <div className="p-5 space-y-5">
@@ -123,9 +135,11 @@ export default function ThemeModal({ currentConfig, onClose, onSaved }: Props) {
             <p className="text-[11px] text-denon-muted uppercase tracking-wider mb-3">Base Theme</p>
             <div className="grid grid-cols-3 gap-2">
               {(Object.entries(THEMES) as [ThemeName, Theme][]).map(([name, theme]) => (
-                <button
+                <motion.button
                   key={name}
                   onClick={() => handlePickBase(name)}
+                  whileHover={{ scale: 1.03 }}
+                  whileTap={{ scale: 0.96 }}
                   className={`flex flex-col items-center gap-1.5 py-2.5 px-1 rounded-xl transition-all ${
                     draft.base === name
                       ? 'bg-denon-surface ring-1 ring-denon-border'
@@ -142,15 +156,16 @@ export default function ThemeModal({ currentConfig, onClose, onSaved }: Props) {
                   <span className={`text-[10px] font-medium ${draft.base === name ? 'text-denon-text' : 'text-denon-muted'}`}>
                     {theme.label}
                   </span>
-                </button>
+                </motion.button>
               ))}
             </div>
           </div>
 
           {/* Color overrides */}
           <div className="border border-denon-border/50 rounded-xl overflow-hidden">
-            <button
+            <motion.button
               onClick={() => setOverridesExpanded(e => !e)}
+              whileTap={{ scale: 0.99 }}
               className="w-full flex items-center justify-between px-4 py-3 text-denon-text hover:bg-denon-surface/50 transition-all"
             >
               <span className="text-sm font-medium">Color Overrides</span>
@@ -160,85 +175,116 @@ export default function ThemeModal({ currentConfig, onClose, onSaved }: Props) {
                     {Object.keys(draft.overrides).length} active
                   </span>
                 )}
-                <svg
-                  className={`w-4 h-4 text-denon-muted transition-transform ${overridesExpanded ? 'rotate-180' : ''}`}
-                  viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"
+                <motion.div
+                  animate={{ rotate: overridesExpanded ? 180 : 0 }}
+                  transition={SPRING}
+                  style={{ display: 'inline-flex' }}
                 >
-                  <path d="M6 9l6 6 6-6" />
-                </svg>
+                  <svg
+                    className="w-4 h-4 text-denon-muted"
+                    viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"
+                  >
+                    <path d="M6 9l6 6 6-6" />
+                  </svg>
+                </motion.div>
               </div>
-            </button>
+            </motion.button>
 
-            {overridesExpanded && (
-              <div className="border-t border-denon-border/50 px-4 py-3 space-y-3">
-                {OVERRIDE_VARS.map(({ key, label, defaultFor }) => {
-                  const effectiveValue = draft.overrides[key] ?? defaultFor(baseTheme)
-                  const isOverridden = key in draft.overrides
-                  return (
-                    <div key={key} className="flex items-center gap-3">
-                      <input
-                        type="color"
-                        value={effectiveValue}
-                        onChange={e => handleOverride(key, e.target.value)}
-                        className="w-8 h-8 rounded-lg border border-denon-border cursor-pointer bg-transparent"
-                        title={label}
-                      />
-                      <div className="flex-1 min-w-0">
-                        <div className="text-sm text-denon-text">{label}</div>
-                        <div className="text-[11px] text-denon-muted font-mono">{effectiveValue}</div>
+            <AnimatePresence>
+              {overridesExpanded && (
+                <motion.div
+                  key="overrides-body"
+                  variants={fadeInUp}
+                  initial="initial"
+                  animate="animate"
+                  exit="exit"
+                  transition={FAST}
+                  className="border-t border-denon-border/50 px-4 py-3 space-y-3"
+                >
+                  {OVERRIDE_VARS.map(({ key, label, defaultFor }) => {
+                    const effectiveValue = draft.overrides[key] ?? defaultFor(baseTheme)
+                    const isOverridden = key in draft.overrides
+                    return (
+                      <div key={key} className="flex items-center gap-3">
+                        <input
+                          type="color"
+                          value={effectiveValue}
+                          onChange={e => handleOverride(key, e.target.value)}
+                          className="w-8 h-8 rounded-lg border border-denon-border cursor-pointer bg-transparent"
+                          title={label}
+                        />
+                        <div className="flex-1 min-w-0">
+                          <div className="text-sm text-denon-text">{label}</div>
+                          <div className="text-[11px] text-denon-muted font-mono">{effectiveValue}</div>
+                        </div>
+                        {isOverridden && (
+                          <motion.button
+                            onClick={() => handleClearOverride(key)}
+                            whileHover={{ scale: 1.15 }}
+                            whileTap={{ scale: 0.88 }}
+                            className="w-6 h-6 flex items-center justify-center rounded-md text-denon-muted hover:text-denon-text hover:bg-denon-surface transition-all flex-shrink-0"
+                            title="Reset to default"
+                          >
+                            <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+                              <path d="M18 6L6 18M6 6l12 12" />
+                            </svg>
+                          </motion.button>
+                        )}
                       </div>
-                      {isOverridden && (
-                        <button
-                          onClick={() => handleClearOverride(key)}
-                          className="w-6 h-6 flex items-center justify-center rounded-md text-denon-muted hover:text-denon-text hover:bg-denon-surface transition-all flex-shrink-0"
-                          title="Reset to default"
-                        >
-                          <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
-                            <path d="M18 6L6 18M6 6l12 12" />
-                          </svg>
-                        </button>
-                      )}
-                    </div>
-                  )
-                })}
-              </div>
-            )}
+                    )
+                  })}
+                </motion.div>
+              )}
+            </AnimatePresence>
           </div>
 
           {/* Error */}
-          {error && (
-            <p className="text-denon-red text-sm bg-denon-red/10 border border-denon-red/20 rounded-lg px-3 py-2">
-              {error}
-            </p>
-          )}
+          <AnimatePresence>
+            {error && (
+              <motion.p
+                key="error"
+                variants={fadeInUp}
+                initial="initial"
+                animate="animate"
+                exit="exit"
+                transition={FAST}
+                className="text-denon-red text-sm bg-denon-red/10 border border-denon-red/20 rounded-lg px-3 py-2"
+              >
+                {error}
+              </motion.p>
+            )}
+          </AnimatePresence>
         </div>
 
         {/* Footer */}
         <div className="flex items-center justify-between gap-3 p-5 border-t border-denon-border/60">
-          <button
+          <motion.button
             onClick={handleResetAll}
             disabled={Object.keys(draft.overrides).length === 0}
+            whileTap={{ scale: 0.96 }}
             className="text-sm text-denon-muted hover:text-denon-text disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
           >
             Reset overrides
-          </button>
+          </motion.button>
           <div className="flex gap-2">
-            <button
+            <motion.button
               onClick={handleCancel}
+              whileTap={{ scale: 0.96 }}
               className="btn btn-ghost text-sm px-4 py-2"
             >
               Cancel
-            </button>
-            <button
+            </motion.button>
+            <motion.button
               onClick={handleSave}
               disabled={saving}
+              whileTap={{ scale: 0.96 }}
               className="btn btn-primary text-sm px-4 py-2 disabled:opacity-60"
             >
               {saving ? 'Saving…' : 'Save'}
-            </button>
+            </motion.button>
           </div>
         </div>
-      </div>
-    </div>
+      </motion.div>
+    </motion.div>
   )
 }

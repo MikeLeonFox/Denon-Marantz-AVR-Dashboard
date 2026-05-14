@@ -1,3 +1,4 @@
+import { motion } from 'framer-motion'
 import type { ReceiverState, SendCommandFn, PostFn, Zone } from '../types'
 
 const MEDIA_SOURCES = new Set(['NET', 'MPLAY', 'BT', 'USB', 'USB/IPOD', 'SPOTIFY', 'PANDORA', 'SIRIUSXM', 'IRADIO', 'SERVER', 'FAVORITES'])
@@ -79,19 +80,22 @@ export default function MediaControls({ state, zone = 'main' }: Props) {
       )}
 
       <div className="flex items-center justify-center gap-3">
-        <button
+        <motion.button
           onClick={() => doMedia('previous')}
-          className="w-11 h-11 rounded-xl bg-denon-surface/70 text-denon-muted hover:text-denon-text hover:bg-denon-surface transition-all active:scale-95 flex items-center justify-center"
+          whileTap={{ scale: 0.9 }}
+          className="w-11 h-11 rounded-xl bg-denon-surface/70 text-denon-muted hover:text-denon-text hover:bg-denon-surface transition-all flex items-center justify-center"
           title="Previous"
         >
           <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
             <path d="M6 6h2v12H6zm3.5 6l8.5 6V6z"/>
           </svg>
-        </button>
+        </motion.button>
 
-        <button
+        <motion.button
           onClick={() => doMedia(isPlaying ? 'pause' : 'play')}
-          className="w-14 h-14 rounded-2xl bg-gradient-to-br from-denon-gold to-amber-600 text-denon-dark shadow-lg shadow-denon-gold/25 hover:brightness-110 transition-all active:scale-95 flex items-center justify-center"
+          whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.92 }}
+          className="w-14 h-14 rounded-2xl bg-gradient-to-br from-denon-gold to-amber-600 text-denon-dark shadow-lg shadow-denon-gold/25 hover:brightness-110 transition-all flex items-center justify-center"
           title={isPlaying ? 'Pause' : 'Play'}
         >
           {isPlaying ? (
@@ -103,17 +107,18 @@ export default function MediaControls({ state, zone = 'main' }: Props) {
               <path d="M8 5v14l11-7z"/>
             </svg>
           )}
-        </button>
+        </motion.button>
 
-        <button
+        <motion.button
           onClick={() => doMedia('next')}
-          className="w-11 h-11 rounded-xl bg-denon-surface/70 text-denon-muted hover:text-denon-text hover:bg-denon-surface transition-all active:scale-95 flex items-center justify-center"
+          whileTap={{ scale: 0.9 }}
+          className="w-11 h-11 rounded-xl bg-denon-surface/70 text-denon-muted hover:text-denon-text hover:bg-denon-surface transition-all flex items-center justify-center"
           title="Next"
         >
           <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
             <path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z"/>
           </svg>
-        </button>
+        </motion.button>
       </div>
     </div>
   )

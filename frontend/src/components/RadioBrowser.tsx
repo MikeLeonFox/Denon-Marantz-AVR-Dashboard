@@ -1,5 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { createPortal } from 'react-dom'
+import { motion, AnimatePresence } from 'framer-motion'
+import { SPIN, PULSE } from '../variants'
 
 interface RadioItem {
   cid?: string
@@ -103,7 +105,6 @@ export default function RadioBrowser({ open, onClose }: Props) {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [playingMid, setPlayingMid] = useState<string | null>(null)
-  const [closing, setClosing] = useState(false)
   const [retryCount, setRetryCount] = useState(0)
   const [searchQuery, setSearchQuery] = useState('')
   const [searchResults, setSearchResults] = useState<RadioItem[] | null>(null)
@@ -127,7 +128,6 @@ export default function RadioBrowser({ open, onClose }: Props) {
     if (open && !prevOpenRef.current) {
       setNavStack([])
       setPlayingMid(null)
-      setClosing(false)
       setRetryCount(0)
       setSearchQuery('')
     }
@@ -168,10 +168,10 @@ export default function RadioBrowser({ open, onClose }: Props) {
 
   useEffect(() => {
     if (!open) return
-    const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') handleClose() }
+    const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose() }
     window.addEventListener('keydown', handler)
     return () => window.removeEventListener('keydown', handler)
-  }, [open]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [open, onClose])
 
   useEffect(() => {
     if (contentRef.current) contentRef.current.scrollTop = 0
@@ -220,11 +220,6 @@ export default function RadioBrowser({ open, onClose }: Props) {
     return () => { clearTimeout(timer); controller.abort() }
   }, [searchQuery, cachedCount])
 
-  const handleClose = () => {
-    setClosing(true)
-    setTimeout(() => { setClosing(false); onClose() }, 150)
-  }
-
   const handleItemClick = async (item: RadioItem) => {
     if (item.container === 'yes') {
       setNavStack(prev => [...prev, { title: decodeLabel(item.name), cid: item.cid ?? null }])
@@ -237,7 +232,7 @@ export default function RadioBrowser({ open, onClose }: Props) {
           body: JSON.stringify({ mid: item.mid }),
         })
         if (!resp.ok) throw new Error()
-        setTimeout(handleClose, 600)
+        setTimeout(onClose, 600)
       } catch {
         setPlayingMid(null)
         setError('Could not play station')
@@ -248,8 +243,6 @@ export default function RadioBrowser({ open, onClose }: Props) {
 
   const handleBack = () => { setNavStack(prev => prev.slice(0, -1)); setSearchQuery('') }
 
-  if (!open) return null
-
   const isSearching = searchResults !== null
   const isTopLevel = navStack.length === 0 && !isSearching
   const HIDDEN_CATEGORIES = new Set(['By Language'])
@@ -257,151 +250,199 @@ export default function RadioBrowser({ open, onClose }: Props) {
     ? items.filter(i => !HIDDEN_CATEGORIES.has(i.name) && !HIDDEN_CATEGORIES.has(decodeLabel(i.name)))
     : items
   const displayItems = isSearching ? searchResults! : filteredItems
-  const animClass = closing ? 'opacity-0 translate-y-4' : 'opacity-100 translate-y-0'
-  const backdropClass = closing ? 'opacity-0' : 'opacity-100'
 
   return createPortal(
-    <>
-      <div className={`fixed inset-0 bg-black/70 z-50 transition-opacity duration-200 ${backdropClass}`} onClick={handleClose} />
-      <div className={`fixed inset-2 sm:inset-auto sm:top-4 sm:bottom-4 sm:left-1/2 sm:-translate-x-1/2 sm:w-full sm:max-w-2xl
-        bg-denon-dark rounded-2xl z-50 flex flex-col overflow-hidden
-        border border-denon-accent/40 shadow-2xl shadow-black/50
-        transition-all duration-200 ease-out ${animClass}`}
-      >
-        {/* Header */}
-        <div className="flex items-center justify-between px-4 py-3 border-b border-denon-border/30 shrink-0">
-          <div className="flex items-center gap-2">
-            {!isTopLevel && (
-              <button onClick={handleBack} className="text-denon-muted hover:text-denon-text transition-colors p-1">
-                <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M15 18l-6-6 6-6" /></svg>
-              </button>
-            )}
-            <h2 className="text-sm font-medium text-denon-text truncate">{currentTitle}</h2>
-            <span className="text-sm text-denon-muted bg-denon-surface px-2.5 py-1 rounded-full font-medium">
-              📻 {cachedCount > 0 ? cachedCount : '...'}
-            </span>
-          </div>
-          <div className="flex items-center gap-1">
-            <button
-              onClick={async () => {
-                if (refreshing) return
-                refreshTargetRef.current = Math.max(cachedCount, 100)
-                setRefreshing(true); setCachedCount(0); cacheRef.current.clear()
-                try {
-                  await fetch('/api/v1/media/radio/refresh', { method: 'POST' })
-                  setRetryCount(c => c + 1)
-                } catch { setRefreshing(false) }
-              }}
-              disabled={refreshing}
-              className={`p-1.5 transition-all ${refreshing ? 'text-denon-gold/40 cursor-wait' : 'text-denon-muted hover:text-denon-text'}`}
-              title={refreshing ? 'Refreshing...' : 'Refresh station list'}
-            >
-              <svg className={`w-5 h-5 ${refreshing ? 'animate-spin' : ''}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M1 4v6h6M23 20v-6h-6" />
-                <path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 0 1 3.51 15" />
-              </svg>
-            </button>
-            <button onClick={handleClose} className="text-denon-muted hover:text-denon-text transition-colors p-1">
-              <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 6L6 18M6 6l12 12" /></svg>
-            </button>
-          </div>
-        </div>
-
-        {/* Search */}
-        <div className="px-3 sm:px-4 pt-3 shrink-0">
-          <div className="relative">
-            <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-denon-muted pointer-events-none" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <circle cx="11" cy="11" r="8" /><path d="M21 21l-4.35-4.35" />
-            </svg>
-            <input
-              ref={searchInputRef}
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search stations..."
-              className="w-full bg-denon-surface/70 text-denon-text text-sm rounded-xl pl-10 pr-8 py-2.5 border border-denon-border/30 focus:border-denon-accent/50 focus:outline-none placeholder:text-denon-muted/50 transition-colors"
-            />
-            {searchQuery && (
-              <button onClick={() => { setSearchQuery(''); searchInputRef.current?.focus() }} className="absolute right-3 top-1/2 -translate-y-1/2 text-denon-muted hover:text-denon-text transition-colors">
-                <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 6L6 18M6 6l12 12" /></svg>
-              </button>
-            )}
-          </div>
-          {isSearching && <p className="text-[10px] text-denon-muted mt-1.5 ml-1">{searchInfo}</p>}
-        </div>
-
-        {/* Content */}
-        <div ref={contentRef} className="flex-1 overflow-y-auto p-3 sm:p-4" style={{ WebkitOverflowScrolling: 'touch' } as React.CSSProperties}>
-          {loading && !isSearching && (
-            <div className="flex flex-col items-center gap-4 py-12">
-              <div className="w-48 h-1 bg-denon-surface rounded-full overflow-hidden">
-                <div className="h-full bg-denon-gold rounded-full animate-pulse" style={{ width: '60%' }} />
-              </div>
-              <p className="text-xs text-denon-muted">Loading stations...</p>
-            </div>
-          )}
-          {error && !loading && (
-            <div className="flex flex-col items-center gap-3 py-12 text-center">
-              <p className="text-sm text-denon-red">{error}</p>
-              <button onClick={() => setRetryCount(c => c + 1)} className="text-xs text-denon-gold hover:text-denon-text transition-colors px-3 py-1.5 rounded-lg bg-denon-surface">Retry</button>
-            </div>
-          )}
-          {!loading && !error && displayItems.length === 0 && !isSearching && (
-            <p className="text-center text-sm text-denon-muted py-12">No stations found in this category</p>
-          )}
-          {isSearching && searchResults!.length === 0 && (
-            <div className="text-center py-12">
-              <p className="text-sm text-denon-muted">No matches found</p>
-              <p className="text-xs text-denon-muted/60 mt-1">Try a different search term</p>
-            </div>
-          )}
-          {!loading && !error && displayItems.length > 0 && (
-            <div className={isTopLevel ? 'grid grid-cols-3 gap-2 sm:gap-3' : 'space-y-1'}>
-              {displayItems.map((item, idx) => {
-                const label = decodeLabel(item.name)
-                const isContainer = item.container === 'yes'
-                const isPlaying = playingMid === item.mid
-                const img = safeImageUrl(item.image_url)
-
-                if (isTopLevel && !isSearching && isContainer) {
-                  return (
-                    <button key={item.cid ?? idx} onClick={() => handleItemClick(item)}
-                      className="flex flex-col items-center justify-center gap-2 py-5 px-2 rounded-xl bg-denon-surface/70 text-denon-text hover:bg-denon-surface hover:scale-[1.02] active:scale-[0.98] transition-all"
-                    >
-                      <span className="text-2xl">{CATEGORY_ICONS[item.name] ?? CATEGORY_ICONS[label] ?? '📁'}</span>
-                      <span className="text-xs font-medium text-center leading-tight">{label}</span>
-                    </button>
-                  )
-                }
-
-                return (
-                  <button key={item.mid ?? item.cid ?? idx} onClick={() => handleItemClick(item)}
-                    className={`w-full flex items-center gap-3 py-2.5 px-3 rounded-xl text-left transition-all ${
-                      isPlaying ? 'bg-denon-gold/20 text-denon-gold ring-1 ring-denon-gold/40' : 'bg-denon-surface/50 hover:bg-denon-surface hover:scale-[1.01] active:scale-[0.99]'
-                    }`}
+    <AnimatePresence>
+      {open && (
+        <>
+          <motion.div
+            key="radio-backdrop"
+            className="fixed inset-0 bg-black/70 z-50"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            onClick={onClose}
+          />
+          <motion.div
+            key="radio-modal"
+            className="fixed inset-2 sm:inset-auto sm:top-4 sm:bottom-4 sm:left-1/2 sm:-translate-x-1/2 sm:w-full sm:max-w-2xl
+              bg-denon-dark rounded-2xl z-50 flex flex-col overflow-hidden
+              border border-denon-accent/40 shadow-2xl shadow-black/50"
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 12 }}
+            transition={{ duration: 0.2, ease: 'easeOut' }}
+          >
+            {/* Header */}
+            <div className="flex items-center justify-between px-4 py-3 border-b border-denon-border/30 shrink-0">
+              <div className="flex items-center gap-2">
+                {!isTopLevel && (
+                  <motion.button
+                    onClick={handleBack}
+                    whileTap={{ scale: 0.9 }}
+                    className="text-denon-muted hover:text-denon-text transition-colors p-1"
                   >
-                    {img ? (
-                      <img src={img} alt="" className="w-10 h-10 rounded-lg object-cover shrink-0 bg-denon-surface" />
-                    ) : (
-                      <div className="w-10 h-10 rounded-lg bg-denon-surface/80 flex items-center justify-center shrink-0">
-                        <span className="text-lg">{FLAGS[label] ?? (isContainer ? '📁' : '📻')}</span>
-                      </div>
-                    )}
-                    <div className="min-w-0 flex-1">
-                      <p className="text-sm font-medium text-denon-text truncate">{label}</p>
-                    </div>
-                    {isContainer && (
-                      <svg className="w-4 h-4 text-denon-muted shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M9 18l6-6-6-6" /></svg>
-                    )}
-                    {isPlaying && <span className="w-2 h-2 rounded-full bg-denon-gold shrink-0 animate-pulse" />}
-                  </button>
-                )
-              })}
+                    <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M15 18l-6-6 6-6" /></svg>
+                  </motion.button>
+                )}
+                <h2 className="text-sm font-medium text-denon-text truncate">{currentTitle}</h2>
+                <span className="text-sm text-denon-muted bg-denon-surface px-2.5 py-1 rounded-full font-medium">
+                  📻 {cachedCount > 0 ? cachedCount : '...'}
+                </span>
+              </div>
+              <div className="flex items-center gap-1">
+                <motion.button
+                  onClick={async () => {
+                    if (refreshing) return
+                    refreshTargetRef.current = Math.max(cachedCount, 100)
+                    setRefreshing(true); setCachedCount(0); cacheRef.current.clear()
+                    try {
+                      await fetch('/api/v1/media/radio/refresh', { method: 'POST' })
+                      setRetryCount(c => c + 1)
+                    } catch { setRefreshing(false) }
+                  }}
+                  disabled={refreshing}
+                  whileTap={refreshing ? undefined : { scale: 0.9 }}
+                  className={`p-1.5 transition-all ${refreshing ? 'text-denon-gold/40 cursor-wait' : 'text-denon-muted hover:text-denon-text'}`}
+                  title={refreshing ? 'Refreshing...' : 'Refresh station list'}
+                >
+                  <motion.svg
+                    className="w-5 h-5"
+                    viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
+                    animate={refreshing ? { rotate: 360 } : { rotate: 0 }}
+                    transition={refreshing ? SPIN : { duration: 0 }}
+                  >
+                    <path d="M1 4v6h6M23 20v-6h-6" />
+                    <path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 0 1 3.51 15" />
+                  </motion.svg>
+                </motion.button>
+                <motion.button
+                  onClick={onClose}
+                  whileTap={{ scale: 0.9 }}
+                  className="text-denon-muted hover:text-denon-text transition-colors p-1"
+                >
+                  <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 6L6 18M6 6l12 12" /></svg>
+                </motion.button>
+              </div>
             </div>
-          )}
-        </div>
-      </div>
-    </>,
+
+            {/* Search */}
+            <div className="px-3 sm:px-4 pt-3 shrink-0">
+              <div className="relative">
+                <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-denon-muted pointer-events-none" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <circle cx="11" cy="11" r="8" /><path d="M21 21l-4.35-4.35" />
+                </svg>
+                <input
+                  ref={searchInputRef}
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="Search stations..."
+                  className="w-full bg-denon-surface/70 text-denon-text text-sm rounded-xl pl-10 pr-8 py-2.5 border border-denon-border/30 focus:border-denon-accent/50 focus:outline-none placeholder:text-denon-muted/50 transition-colors"
+                />
+                {searchQuery && (
+                  <button onClick={() => { setSearchQuery(''); searchInputRef.current?.focus() }} className="absolute right-3 top-1/2 -translate-y-1/2 text-denon-muted hover:text-denon-text transition-colors">
+                    <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 6L6 18M6 6l12 12" /></svg>
+                  </button>
+                )}
+              </div>
+              {isSearching && <p className="text-[10px] text-denon-muted mt-1.5 ml-1">{searchInfo}</p>}
+            </div>
+
+            {/* Content */}
+            <div ref={contentRef} className="flex-1 overflow-y-auto p-3 sm:p-4" style={{ WebkitOverflowScrolling: 'touch' } as React.CSSProperties}>
+              {loading && !isSearching && (
+                <div className="flex flex-col items-center gap-4 py-12">
+                  <div className="w-48 h-1 bg-denon-surface rounded-full overflow-hidden">
+                    <motion.div
+                      className="h-full bg-denon-gold rounded-full"
+                      style={{ width: '60%' }}
+                      animate={{ opacity: [1, 0.4, 1] }}
+                      transition={PULSE}
+                    />
+                  </div>
+                  <p className="text-xs text-denon-muted">Loading stations...</p>
+                </div>
+              )}
+              {error && !loading && (
+                <div className="flex flex-col items-center gap-3 py-12 text-center">
+                  <p className="text-sm text-denon-red">{error}</p>
+                  <button onClick={() => setRetryCount(c => c + 1)} className="text-xs text-denon-gold hover:text-denon-text transition-colors px-3 py-1.5 rounded-lg bg-denon-surface">Retry</button>
+                </div>
+              )}
+              {!loading && !error && displayItems.length === 0 && !isSearching && (
+                <p className="text-center text-sm text-denon-muted py-12">No stations found in this category</p>
+              )}
+              {isSearching && searchResults!.length === 0 && (
+                <div className="text-center py-12">
+                  <p className="text-sm text-denon-muted">No matches found</p>
+                  <p className="text-xs text-denon-muted/60 mt-1">Try a different search term</p>
+                </div>
+              )}
+              {!loading && !error && displayItems.length > 0 && (
+                <div className={isTopLevel ? 'grid grid-cols-3 gap-2 sm:gap-3' : 'space-y-1'}>
+                  {displayItems.map((item, idx) => {
+                    const label = decodeLabel(item.name)
+                    const isContainer = item.container === 'yes'
+                    const isPlaying = playingMid === item.mid
+                    const img = safeImageUrl(item.image_url)
+
+                    if (isTopLevel && !isSearching && isContainer) {
+                      return (
+                        <motion.button
+                          key={item.cid ?? idx}
+                          onClick={() => handleItemClick(item)}
+                          whileHover={{ scale: 1.03 }}
+                          whileTap={{ scale: 0.97 }}
+                          className="flex flex-col items-center justify-center gap-2 py-5 px-2 rounded-xl bg-denon-surface/70 text-denon-text hover:bg-denon-surface transition-all"
+                        >
+                          <span className="text-2xl">{CATEGORY_ICONS[item.name] ?? CATEGORY_ICONS[label] ?? '📁'}</span>
+                          <span className="text-xs font-medium text-center leading-tight">{label}</span>
+                        </motion.button>
+                      )
+                    }
+
+                    return (
+                      <motion.button
+                        key={item.mid ?? item.cid ?? idx}
+                        onClick={() => handleItemClick(item)}
+                        whileHover={{ scale: 1.01 }}
+                        whileTap={{ scale: 0.98 }}
+                        className={`w-full flex items-center gap-3 py-2.5 px-3 rounded-xl text-left transition-all ${
+                          isPlaying ? 'bg-denon-gold/20 text-denon-gold ring-1 ring-denon-gold/40' : 'bg-denon-surface/50 hover:bg-denon-surface'
+                        }`}
+                      >
+                        {img ? (
+                          <img src={img} alt="" className="w-10 h-10 rounded-lg object-cover shrink-0 bg-denon-surface" />
+                        ) : (
+                          <div className="w-10 h-10 rounded-lg bg-denon-surface/80 flex items-center justify-center shrink-0">
+                            <span className="text-lg">{FLAGS[label] ?? (isContainer ? '📁' : '📻')}</span>
+                          </div>
+                        )}
+                        <div className="min-w-0 flex-1">
+                          <p className="text-sm font-medium text-denon-text truncate">{label}</p>
+                        </div>
+                        {isContainer && (
+                          <svg className="w-4 h-4 text-denon-muted shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M9 18l6-6-6-6" /></svg>
+                        )}
+                        {isPlaying && (
+                          <motion.span
+                            className="w-2 h-2 rounded-full bg-denon-gold shrink-0"
+                            animate={{ opacity: [1, 0.3, 1] }}
+                            transition={PULSE}
+                          />
+                        )}
+                      </motion.button>
+                    )
+                  })}
+                </div>
+              )}
+            </div>
+          </motion.div>
+        </>
+      )}
+    </AnimatePresence>,
     document.body
   )
 }

@@ -1,4 +1,5 @@
 import { useState, useEffect, memo } from 'react'
+import { motion, AnimatePresence } from 'framer-motion'
 import { applyThemeConfig } from './theme'
 import { useWebSocket } from './hooks/useWebSocket'
 import ReceiverSetup from './components/ReceiverSetup'
@@ -16,6 +17,7 @@ import SubwooferLevel from './components/SubwooferLevel'
 import AudioSettings from './components/AudioSettings'
 import Zone2Controls from './components/Zone2Controls'
 import ThemeModal from './components/ThemeModal'
+import { fadeInUp, FAST, SPIN, BOUNCE } from './variants'
 import type { SourceEntry } from './types'
 
 interface NavTabProps {
@@ -28,15 +30,16 @@ interface NavTabProps {
 
 function NavTab({ icon, label, active, dim, onClick }: NavTabProps) {
   return (
-    <button
+    <motion.button
       onClick={onClick}
+      whileTap={{ scale: 0.9 }}
       className={`flex-1 flex flex-col items-center justify-center gap-1 py-2.5 min-w-0 transition-colors ${
         active ? 'text-denon-gold' : dim ? 'text-denon-muted/30' : 'text-denon-muted hover:text-denon-text'
       }`}
     >
       {icon}
       <span className="text-[9px] font-medium leading-none truncate px-0.5">{label}</span>
-    </button>
+    </motion.button>
   )
 }
 
@@ -77,7 +80,11 @@ export default function App() {
     return (
       <div className="min-h-screen flex items-center justify-center bg-denon-dark">
         <div className="text-center">
-          <div className="w-14 h-14 border-4 border-denon-gold/30 border-t-denon-gold rounded-full animate-spin mx-auto mb-4" />
+          <motion.div
+            className="w-14 h-14 border-4 border-denon-gold/30 border-t-denon-gold rounded-full mx-auto mb-4"
+            animate={{ rotate: 360 }}
+            transition={SPIN}
+          />
           <p className="text-denon-muted text-sm">Connecting…</p>
         </div>
       </div>
@@ -89,9 +96,14 @@ export default function App() {
       <div className="min-h-screen flex items-center justify-center bg-denon-dark p-6">
         <div className="text-center space-y-4">
           <div className="w-16 h-16 rounded-2xl bg-denon-card border border-denon-border flex items-center justify-center mx-auto">
-            <svg className="w-8 h-8 text-denon-gold animate-pulse" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+            <motion.svg
+              className="w-8 h-8 text-denon-gold"
+              viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"
+              animate={{ opacity: [1, 0.3, 1] }}
+              transition={{ duration: 1.8, repeat: Infinity, ease: 'easeInOut' }}
+            >
               <path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/>
-            </svg>
+            </motion.svg>
           </div>
           <div>
             <p className="text-denon-text font-semibold">Searching for receiver…</p>
@@ -99,7 +111,12 @@ export default function App() {
           </div>
           <div className="flex justify-center gap-1.5 pt-1">
             {[0, 1, 2].map(i => (
-              <div key={i} className="w-2 h-2 rounded-full bg-denon-gold animate-bounce" style={{ animationDelay: `${i * 0.15}s` }} />
+              <motion.div
+                key={i}
+                className="w-2 h-2 rounded-full bg-denon-gold"
+                animate={{ y: [0, -6, 0] }}
+                transition={{ ...BOUNCE, delay: i * 0.15 }}
+              />
             ))}
           </div>
         </div>
@@ -116,13 +133,16 @@ export default function App() {
           onConnect={() => { /* connection state arrives via WebSocket push */ }}
           onOpenThemeModal={() => setThemeModalOpen(true)}
         />
-        {themeModalOpen && (
-          <ThemeModal
-            currentConfig={state?.theme_config ?? { base: 'gold', overrides: {} }}
-            onClose={() => setThemeModalOpen(false)}
-            onSaved={cfg => patchState({ theme_config: cfg })}
-          />
-        )}
+        <AnimatePresence>
+          {themeModalOpen && (
+            <ThemeModal
+              key="theme-modal"
+              currentConfig={state?.theme_config ?? { base: 'gold', overrides: {} }}
+              onClose={() => setThemeModalOpen(false)}
+              onSaved={cfg => patchState({ theme_config: cfg })}
+            />
+          )}
+        </AnimatePresence>
       </>
     )
   }
@@ -157,8 +177,10 @@ export default function App() {
 
       {/* Zone selector — hidden on mobile (bottom nav takes over) */}
       <div className="hidden sm:flex gap-0 mb-5 bg-denon-card/50 rounded-2xl p-1.5 border border-denon-border/50 backdrop-blur-sm">
-        <button
+        <motion.button
           onClick={() => setZone('main')}
+          whileHover={{ scale: 1.01 }}
+          whileTap={{ scale: 0.97 }}
           className={`flex-1 py-3 px-4 rounded-xl text-sm font-semibold transition-all duration-200 ${
             zone === 'main'
               ? 'bg-gradient-to-r from-denon-gold to-amber-500 text-denon-dark shadow-lg shadow-denon-gold/25'
@@ -169,9 +191,11 @@ export default function App() {
             <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
             {zoneName}
           </span>
-        </button>
-        <button
+        </motion.button>
+        <motion.button
           onClick={() => setZone('zone2')}
+          whileHover={{ scale: 1.01 }}
+          whileTap={{ scale: 0.97 }}
           className={`flex-1 py-3 px-4 rounded-xl text-sm font-semibold transition-all duration-200 ${
             zone === 'zone2'
               ? 'bg-gradient-to-r from-denon-gold to-amber-500 text-denon-dark shadow-lg shadow-denon-gold/25'
@@ -182,78 +206,105 @@ export default function App() {
             <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 18v-6a9 9 0 0 1 18 0v6"/><path d="M21 19a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3zM3 19a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2v-3a2 2 0 0 0-2-2H3z"/></svg>
             {z2Name}
           </span>
-        </button>
+        </motion.button>
       </div>
 
-      {zone === 'main' && (
-        <>
-          <div className="flex gap-1 mb-4">
-            {mainSections.map(s => (
-              <button
-                key={s.id}
-                onClick={() => setActiveSection(s.id)}
-                className={`flex-1 py-2 rounded-lg text-xs font-medium transition-all ${
-                  activeSection === s.id
-                    ? 'bg-denon-surface text-denon-gold border border-denon-gold/30'
-                    : 'text-denon-muted hover:text-denon-text'
-                }`}
+      <AnimatePresence mode="wait">
+        {zone === 'main' && (
+          <motion.div
+            key="main"
+            variants={fadeInUp}
+            initial="initial"
+            animate="animate"
+            exit="exit"
+            transition={FAST}
+          >
+            <div className="flex gap-1 mb-4">
+              {mainSections.map(s => (
+                <motion.button
+                  key={s.id}
+                  onClick={() => setActiveSection(s.id)}
+                  whileTap={{ scale: 0.96 }}
+                  className={`flex-1 py-2 rounded-lg text-xs font-medium transition-all ${
+                    activeSection === s.id
+                      ? 'bg-denon-surface text-denon-gold border border-denon-gold/30'
+                      : 'text-denon-muted hover:text-denon-text'
+                  }`}
+                >
+                  {s.label}
+                </motion.button>
+              ))}
+            </div>
+
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={activeSection}
+                className="space-y-4"
+                variants={fadeInUp}
+                initial="initial"
+                animate="animate"
+                exit="exit"
+                transition={FAST}
               >
-                {s.label}
-              </button>
-            ))}
-          </div>
+                {activeSection === 'controls' && (
+                  <>
+                    <MemoPowerControl state={state} sendCommand={sendCommand} zone="main" />
+                    <MemoVolumeControl state={state} sendCommand={sendCommand} post={post} />
+                    <MemoMediaControls state={state} sendCommand={sendCommand} post={post} />
+                    <MemoSourceSelector
+                      state={state}
+                      sendCommand={sendCommand}
+                      sources={configuredSources}
+                      sourceNameMap={sourceNameMap}
+                    />
+                    <SurroundMode state={state} sendCommand={sendCommand} />
+                  </>
+                )}
 
-          <div className="space-y-4 fade-in" key={activeSection}>
-            {activeSection === 'controls' && (
-              <>
-                <MemoPowerControl state={state} sendCommand={sendCommand} zone="main" />
-                <MemoVolumeControl state={state} sendCommand={sendCommand} post={post} />
-                <MemoMediaControls state={state} sendCommand={sendCommand} post={post} />
-                <MemoSourceSelector
-                  state={state}
-                  sendCommand={sendCommand}
-                  sources={configuredSources}
-                  sourceNameMap={sourceNameMap}
-                />
-                <SurroundMode state={state} sendCommand={sendCommand} />
-              </>
-            )}
+                {activeSection === 'speakers' && (
+                  <>
+                    <MemoChannelLevels
+                      channels={state.channel_volumes ?? {}}
+                      channelNames={channelNames}
+                      sendCommand={sendCommand}
+                      post={post}
+                      calibration={state.speaker_calibration}
+                    />
+                    <SubwooferLevel state={state} post={post} />
+                  </>
+                )}
 
-            {activeSection === 'speakers' && (
-              <>
-                <MemoChannelLevels
-                  channels={state.channel_volumes ?? {}}
-                  channelNames={channelNames}
-                  sendCommand={sendCommand}
-                  post={post}
-                  calibration={state.speaker_calibration}
-                />
-                <SubwooferLevel state={state} post={post} />
-              </>
-            )}
+                {activeSection === 'audio' && (
+                  <>
+                    <ToneControls state={state} post={post} />
+                    <MemoAudioSettings state={state} post={post} />
+                  </>
+                )}
+              </motion.div>
+            </AnimatePresence>
+          </motion.div>
+        )}
 
-            {activeSection === 'audio' && (
-              <>
-                <ToneControls state={state} post={post} />
-                <MemoAudioSettings state={state} post={post} />
-              </>
-            )}
-          </div>
-        </>
-      )}
-
-      {zone === 'zone2' && (
-        <div className="fade-in">
-          <Zone2Controls
-            state={state}
-            sendCommand={sendCommand}
-            post={post}
-            sources={configuredSources}
-            sourceNameMap={sourceNameMap}
-            zoneName={z2Name}
-          />
-        </div>
-      )}
+        {zone === 'zone2' && (
+          <motion.div
+            key="zone2"
+            variants={fadeInUp}
+            initial="initial"
+            animate="animate"
+            exit="exit"
+            transition={FAST}
+          >
+            <Zone2Controls
+              state={state}
+              sendCommand={sendCommand}
+              post={post}
+              sources={configuredSources}
+              sourceNameMap={sourceNameMap}
+              zoneName={z2Name}
+            />
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Mobile bottom navigation */}
       <nav
@@ -322,12 +373,16 @@ export default function App() {
         />
       </nav>
 
-      {themeModalOpen && (
-        <ThemeModal
-          currentConfig={state?.theme_config ?? { base: 'gold', overrides: {} }}
-          onClose={() => setThemeModalOpen(false)}
-        />
-      )}
+      <AnimatePresence>
+        {themeModalOpen && (
+          <ThemeModal
+            key="theme-modal"
+            currentConfig={state?.theme_config ?? { base: 'gold', overrides: {} }}
+            onClose={() => setThemeModalOpen(false)}
+            onSaved={cfg => patchState({ theme_config: cfg })}
+          />
+        )}
+      </AnimatePresence>
     </div>
   )
 }

@@ -1,4 +1,6 @@
 import { useState } from 'react'
+import { motion } from 'framer-motion'
+import { SPIN } from '../variants'
 
 interface DiscoveredDevice {
   ip: string
@@ -58,8 +60,10 @@ export default function ReceiverSetup({ reason, onConnect, onOpenThemeModal }: P
   return (
     <div className="min-h-screen flex items-center justify-center bg-denon-dark p-6 relative">
       <div className="absolute top-4 right-4">
-        <button
+        <motion.button
           onClick={onOpenThemeModal}
+          whileHover={{ scale: 1.08 }}
+          whileTap={{ scale: 0.92 }}
           className="w-8 h-8 flex items-center justify-center rounded-lg text-denon-muted hover:text-denon-text hover:bg-denon-surface/70 transition-all"
           title="Theme settings"
           aria-label="Theme settings"
@@ -68,7 +72,7 @@ export default function ReceiverSetup({ reason, onConnect, onOpenThemeModal }: P
             <circle cx="12" cy="12" r="3" />
             <path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42" />
           </svg>
-        </button>
+        </motion.button>
       </div>
       <div className="w-full max-w-md space-y-5">
         <div className="text-center">
@@ -109,17 +113,31 @@ export default function ReceiverSetup({ reason, onConnect, onOpenThemeModal }: P
               <h2 className="text-sm font-semibold text-denon-text">Auto-discover</h2>
               <p className="text-xs text-denon-muted mt-0.5">Scans your network for Denon/Marantz receivers</p>
             </div>
-            <button onClick={scan} disabled={scanning}
+            <motion.button
+              onClick={scan}
+              disabled={scanning}
+              whileTap={{ scale: 0.95 }}
               className="px-4 py-2 rounded-xl text-sm font-medium bg-denon-gold text-denon-dark disabled:opacity-50 transition-opacity flex items-center gap-2"
             >
-              {scanning && <span className="w-3 h-3 border-2 border-denon-dark/30 border-t-denon-dark rounded-full animate-spin" />}
+              {scanning && (
+                <motion.span
+                  className="w-3 h-3 border-2 border-denon-dark/30 border-t-denon-dark rounded-full"
+                  animate={{ rotate: 360 }}
+                  transition={SPIN}
+                />
+              )}
               {scanning ? 'Scanning…' : 'Scan network'}
-            </button>
+            </motion.button>
           </div>
           {devices != null && !scanning && devices.length > 0 && (
             <div className="space-y-2">
               {devices.map(d => (
-                <button key={d.ip} onClick={() => connect(d.ip)} disabled={connecting}
+                <motion.button
+                  key={d.ip}
+                  onClick={() => connect(d.ip)}
+                  disabled={connecting}
+                  whileHover={{ scale: 1.01 }}
+                  whileTap={{ scale: 0.98 }}
                   className="w-full flex items-center justify-between p-3 rounded-xl bg-denon-surface border border-denon-border hover:border-denon-gold/50 transition-colors disabled:opacity-50 text-left"
                 >
                   <div>
@@ -132,7 +150,7 @@ export default function ReceiverSetup({ reason, onConnect, onOpenThemeModal }: P
                   <svg className="w-4 h-4 text-denon-gold flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                     <path d="M9 18l6-6-6-6"/>
                   </svg>
-                </button>
+                </motion.button>
               ))}
             </div>
           )}
@@ -149,11 +167,14 @@ export default function ReceiverSetup({ reason, onConnect, onOpenThemeModal }: P
               placeholder="192.168.1.100"
               className="flex-1 bg-denon-surface border border-denon-border rounded-xl px-3 py-2 text-sm text-denon-text placeholder-denon-muted focus:outline-none focus:border-denon-gold/50"
             />
-            <button onClick={() => connect(manualIp)} disabled={!manualIp || connecting}
+            <motion.button
+              onClick={() => connect(manualIp)}
+              disabled={!manualIp || connecting}
+              whileTap={{ scale: 0.95 }}
               className="px-4 py-2 rounded-xl text-sm font-medium bg-denon-surface border border-denon-border text-denon-text hover:border-denon-gold/50 disabled:opacity-50 transition-colors"
             >
               {connecting ? '…' : 'Connect'}
-            </button>
+            </motion.button>
           </div>
           <p className="text-xs text-denon-muted">
             Find the IP in your router's device list or the receiver's network settings menu.

@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { motion } from 'framer-motion'
 import RadioBrowser from './RadioBrowser'
 import type { ReceiverState, SendCommandFn, Zone, SourceEntry } from '../types'
 
@@ -136,28 +137,32 @@ export default function SourceSelector({ state, sendCommand, sources, sourceName
         {sourceList.map(s => {
           const active = heosServiceCode ? s.id === heosServiceCode : current === s.id
           return (
-            <button
+            <motion.button
               key={s.id}
               onClick={() => sendCommand(`${prefix}${s.id}`)}
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.97 }}
               className={`group relative py-3 px-3 rounded-xl text-sm font-medium transition-all duration-150 text-left overflow-hidden ${
                 active
                   ? 'bg-gradient-to-br from-denon-gold/20 to-amber-500/10 text-denon-gold ring-1 ring-denon-gold/40'
-                  : 'bg-denon-surface/70 text-denon-text hover:bg-denon-surface hover:scale-[1.02] active:scale-[0.98]'
+                  : 'bg-denon-surface/70 text-denon-text hover:bg-denon-surface'
               }`}
             >
               <span className="text-base mr-1.5">{getIcon(s.id, s.name)}</span>
               <span className="text-xs">{s.name}</span>
               {active && <span className="absolute top-1.5 right-1.5 w-1.5 h-1.5 rounded-full bg-denon-gold" />}
               {s.id === 'IRADIO' && (
-                <span
+                <motion.span
                   onClick={(e) => { e.stopPropagation(); setRadioBrowserOpen(true) }}
+                  whileHover={{ scale: 1.15 }}
+                  whileTap={{ scale: 0.88 }}
                   className="absolute bottom-1.5 right-1.5 p-1 rounded-lg bg-denon-surface/80 hover:bg-denon-gold/20 hover:text-denon-gold text-denon-muted transition-all cursor-pointer"
                   title="Browse stations"
                 >
                   <RadioTowerIcon />
-                </span>
+                </motion.span>
               )}
-            </button>
+            </motion.button>
           )
         })}
       </div>
